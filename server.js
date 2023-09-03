@@ -1,5 +1,12 @@
-const app = require('./app')
+// const express = require("express");
+const app = require("./app");
+// const port = process.env.PORT || 3000;
+const connectDB = require("./db/db");
 
-app.listen(3000, () => {
-  console.log("Server running. Use our API on port: 3000")
-})
+// Połącz z bazą danych MongoDB
+connectDB().then(() => {
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
+});
