@@ -66,9 +66,10 @@ const Contact = require("../models/contactModel");
 // };
 
 // working on mongoDB
-Contacts = async () => {
+const listContacts = async () => {
   try {
     const contacts = await Contact.find();
+    console.log(contacts);
     return contacts;
   } catch (error) {
     throw error;
