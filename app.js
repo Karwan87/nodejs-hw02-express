@@ -12,7 +12,6 @@ app.use(logger(formatsLogger));
 app.use(cors());
 app.use(express.json());
 
-// Połącz z bazą danych MongoDB
 connectDB();
 
 app.use("/api/contacts", contactsRouter);
