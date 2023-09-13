@@ -30,12 +30,8 @@ router.post("/signup", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
     const newUser = new User({ email, password: hashedPassword });
     await newUser.save();
-    const token = jwt.sign({ userId: newUser._id }, config.jwtSecret, {
-      expiresIn: "1h",
-    });
     res.status(201).json({
       user: { email: newUser.email, subscription: newUser.subscription },
-      token: token,
     });
   } catch (error) {
     console.error("Error during registration:", error);
