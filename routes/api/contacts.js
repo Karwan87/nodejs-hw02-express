@@ -2,8 +2,9 @@ const express = require("express");
 const contactsRouter = express.Router();
 const Contact = require("../../models/contactModel");
 const { listContacts } = require("../../models/contacts");
+const authMiddleware = require("../../auth/authMiddleware");
 
-contactsRouter.get("/", async (req, res) => {
+contactsRouter.get("/", authMiddleware, async (req, res) => {
   try {
     const contacts = await listContacts();
     res.json(contacts);
@@ -13,7 +14,7 @@ contactsRouter.get("/", async (req, res) => {
   }
 });
 
-contactsRouter.get("/:contactId", async (req, res, next) => {
+contactsRouter.get("/:contactId", authMiddleware, async (req, res, next) => {
   const contactId = req.params.contactId;
   try {
     const contact = await Contact.findById(contactId);
@@ -27,7 +28,7 @@ contactsRouter.get("/:contactId", async (req, res, next) => {
   }
 });
 
-contactsRouter.post("/", async (req, res, next) => {
+contactsRouter.post("/", authMiddleware, async (req, res, next) => {
   const newContactData = req.body;
   try {
     const newContact = await Contact.create(newContactData);
@@ -37,7 +38,7 @@ contactsRouter.post("/", async (req, res, next) => {
   }
 });
 
-contactsRouter.delete("/:contactId", async (req, res, next) => {
+contactsRouter.delete("/:contactId", authMiddleware, async (req, res, next) => {
   const contactId = req.params.contactId;
   try {
     const result = await Contact.findByIdAndDelete(contactId);
@@ -50,7 +51,7 @@ contactsRouter.delete("/:contactId", async (req, res, next) => {
     next(error);
   }
 });
-contactsRouter.put("/:contactId", async (req, res, next) => {
+contactsRouter.put("/:contactId", authMiddleware, async (req, res, next) => {
   const contactId = req.params.contactId;
   const updatedData = req.body;
 
@@ -74,29 +75,33 @@ contactsRouter.put("/:contactId", async (req, res, next) => {
     next(error);
   }
 });
-contactsRouter.patch("/:contactId/favorite", async (req, res, next) => {
-  const contactId = req.params.contactId;
-  const { favorite } = req.body;
+contactsRouter.patch(
+  "/:contactId/favorite",
+  authMiddleware,
+  async (req, res, next) => {
+    const contactId = req.params.contactId;
+    const { favorite } = req.body;
 
-  if (favorite === undefined) {
-    return res.status(400).json({ message: "missing field favorite" });
-  }
-
-  try {
-    const updatedContact = await Contact.findByIdAndUpdate(
-      contactId,
-      { favorite },
-      { new: true }
-    );
-
-    if (updatedContact) {
-      res.status(200).json(updatedContact);
-    } else {
-      res.status(404).json({ message: "Not found" });
+    if (favorite === undefined) {
+      return res.status(400).json({ message: "missing field favorite" });
     }
-  } catch (error) {
-    next(error);
+
+    try {
+      const updatedContact = await Contact.findByIdAndUpdate(
+        contactId,
+        { favorite },
+        { new: true }
+      );
+
+      if (updatedContact) {
+        res.status(200).json(updatedContact);
+      } else {
+        res.status(404).json({ message: "Not found" });
+      }
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 module.exports = contactsRouter;
