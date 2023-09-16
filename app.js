@@ -6,7 +6,6 @@ const contactsRouter = require("./routes/api/contacts");
 const connectDB = require("./db/db");
 const usersRouter = require("./routes/api/users");
 const multer = require("multer");
-const usersAvatarRouter = require("./routes/api/users");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
@@ -24,6 +23,6 @@ app.use(express.static("public"));
 app.use(upload.single("avatar"));
 app.use("/api/contacts", contactsRouter);
 app.use("/api/users", usersRouter);
-app.use("/api/users/avatars", usersAvatarRouter);
+app.use("/api/users/avatars", usersRouter);
 
 module.exports = app;
