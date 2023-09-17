@@ -12,6 +12,7 @@ const multer = require("multer");
 const Jimp = require("jimp");
 const { unlink } = require("fs/promises");
 const { promisify } = require("util");
+const fs = require("fs");
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
@@ -159,7 +160,7 @@ router.patch(
       if (!req.file) {
         return res.status(400).json({ message: "Avatar file is required" });
       }
-      const processedAvatar = await processAvatar(req.file.buffer);
+
       const uniqueFilename = `${req.user.userId}-${Date.now()}.png`;
       const avatarPath = path.join(
         __dirname,
@@ -168,7 +169,9 @@ router.patch(
         "avatars",
         uniqueFilename
       );
-      await processedAvatar.writeAsync(avatarPath);
+      const processedAvatar = await processAvatar(req.file.buffer);
+      const avatarBuffer = await processedAvatar.getBufferAsync(Jimp.MIME_PNG); // lub odpowiedni format MIME
+      fs.writeFileSync(avatarPath, avatarBuffer);
       if (req.user.avatarURL) {
         const previousAvatarPath = path.join(
           __dirname,
@@ -180,9 +183,9 @@ router.patch(
         await unlinkAsync(previousAvatarPath);
       }
 
-      req.user.avatarURL = `/avatars/${uniqueFilename}`;
+            req.user.avatarURL = uniqueFilename;
       await req.user.save();
-      res.status(200).json({ avatarURL: req.user.avatarURL });
+      res.status(200).json({ avatarURL: `/avatars/${uniqueFilename}` });
     } catch (error) {
       console.error("Error during avatar upload:", error);
       res.status(500).json({ message: "Internal server error" });
