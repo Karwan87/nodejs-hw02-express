@@ -20,9 +20,8 @@ app.use(express.json());
 connectDB();
 
 app.use(express.static("public"));
-app.use(upload.single("avatar"));
 app.use("/api/contacts", contactsRouter);
 app.use("/api/users", usersRouter);
-app.use("/api/users/avatars", usersRouter);
+app.use("/api/users/avatars", upload.single("avatar"), usersRouter);
 
 module.exports = app;
