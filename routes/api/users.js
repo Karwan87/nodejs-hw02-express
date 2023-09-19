@@ -160,21 +160,24 @@ router.patch(
       if (!req.file) {
         return res.status(400).json({ message: "Avatar file is required" });
       }
-
-      const uniqueFilename = `${req.user.userId}-${Date.now()}.png`;
+      const userEmail = req.user.email;
+      const userLogin = userEmail.split("@")[0];
+      const uniqueFilename = `${userLogin}-avatar.png`;
       const avatarPath = path.join(
         __dirname,
+        "..",
         "..",
         "public",
         "avatars",
         uniqueFilename
       );
       const processedAvatar = await processAvatar(req.file.buffer);
-      const avatarBuffer = await processedAvatar.getBufferAsync(Jimp.MIME_PNG); // lub odpowiedni format MIME
+      const avatarBuffer = await processedAvatar.getBufferAsync(Jimp.MIME_PNG);
       fs.writeFileSync(avatarPath, avatarBuffer);
       if (req.user.avatarURL) {
         const previousAvatarPath = path.join(
           __dirname,
+          "..",
           "..",
           "public",
           "avatars",
@@ -183,7 +186,7 @@ router.patch(
         await unlinkAsync(previousAvatarPath);
       }
 
-            req.user.avatarURL = uniqueFilename;
+      req.user.avatarURL = uniqueFilename;
       await req.user.save();
       res.status(200).json({ avatarURL: `/avatars/${uniqueFilename}` });
     } catch (error) {
