@@ -23,5 +23,7 @@ app.use(express.static("public"));
 app.use("/api/contacts", contactsRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/users/avatars", upload.single("avatar"), usersRouter);
+app.use("/api/users/verify/:verificationToken", usersRouter);
+app.use("/api/users/verify", usersRouter);
 
 module.exports = app;
