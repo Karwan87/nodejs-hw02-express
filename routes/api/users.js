@@ -116,6 +116,9 @@ router.post("/login", async (req, res) => {
       console.log("User not found");
       return res.status(401).json({ message: "Authentication failed" });
     }
+    if (!user.verify) {
+      return res.status(401).json({ message: "Email is not verified" });
+    }
     const userId = user._id;
     console.log("UserID:", userId);
     const isPasswordValid = await bcrypt.compare(password, user.password);
