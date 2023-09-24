@@ -13,7 +13,8 @@ const Jimp = require("jimp");
 const { unlink } = require("fs/promises");
 const { promisify } = require("util");
 const fs = require("fs");
-
+const { v4: uuidv4 } = require("uuid");
+const nodemailer = require("nodemailer");
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 const unlinkAsync = promisify(require("fs").unlink);
@@ -29,6 +30,11 @@ async function processAvatar(avatarBuffer) {
   return image;
 }
 
+const resendEmailSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
+// Signup endpoint
 router.post("/signup", async (req, res) => {
   try {
     const { error } = userSchema.validate(req.body);
@@ -51,14 +57,41 @@ router.post("/signup", async (req, res) => {
       r: "pg",
       d: "identicon",
     });
+    const verificationToken = uuidv4();
 
-    const newUser = new User({ email, password: hashedPassword, avatarURL });
+    const newUser = new User({
+      email,
+      password: hashedPassword,
+      avatarURL,
+      verificationToken,
+    });
     await newUser.save();
+    const verificationLink = `${process.env.CLIENT_URL}/users/verify/${verificationToken}`;
+
+    const transporter = nodemailer.createTransport({
+      service: "Gmail",
+      auth: {
+        user: "verifytester95@gmail.com",
+        pass: "phmx nlhb krop gmvx",
+      },
+    });
+    const mailOptions = {
+      from: "verifytester95@gmail.com",
+      to: email,
+      subject: "Potwierdzenie rejestracji",
+      text: `Kliknij ten link, aby potwierdzić rejestrację: ${verificationLink}`,
+      html: `<p>Kliknij ten <a href="${verificationLink}">link</a>, aby potwierdzić rejestrację.</p>`,
+    };
+    const result = await transporter.sendMail(mailOptions);
+
+    console.log("Verification email sent:", result.response);
+
     res.status(201).json({
       user: {
         email: newUser.email,
         subscription: newUser.subscription,
         avatarURL,
+        verificationToken,
       },
     });
   } catch (error) {
@@ -82,6 +115,9 @@ router.post("/login", async (req, res) => {
     if (!user) {
       console.log("User not found");
       return res.status(401).json({ message: "Authentication failed" });
+    }
+    if (!user.verify) {
+      return res.status(401).json({ message: "Email is not verified" });
     }
     const userId = user._id;
     console.log("UserID:", userId);
@@ -151,6 +187,7 @@ router.get("/current", authMiddleware, async (req, res) => {
   }
 });
 
+//avatars endpoint
 router.patch(
   "/avatars",
   authMiddleware,
@@ -195,5 +232,69 @@ router.patch(
     }
   }
 );
+
+// verificationToken endpoint
+router.get("/verify/:verificationToken", async (req, res, next) => {
+  try {
+    const { verificationToken } = req.params;
+    const user = await User.findOne({ verificationToken });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    user.verify = true;
+    user.verificationToken = null;
+    await user.save();
+    return res.status(200).json({ message: "Verification successful" });
+  } catch (error) {
+    console.error("User not found", error);
+    res.status(404).json({ message: "User not found" });
+  }
+});
+
+// resendEmail endpoint
+router.post("/verify", async (req, res) => {
+  try {
+    const { error } = resendEmailSchema.validate(req.body);
+    if (error) {
+      return res
+        .status(400)
+        .json({ message: "Validation error", details: error.details });
+    }
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+    if (user.verify) {
+      return res
+        .status(400)
+        .json({ message: "Verification has already been passed" });
+    }
+    const verificationToken = uuidv4();
+    user.verificationToken = verificationToken;
+    await user.save();
+    const verificationLink = `${process.env.CLIENT_URL}/users/verify/${verificationToken}`;
+    const transporter = nodemailer.createTransport({
+      service: "Gmail",
+      auth: {
+        user: "verifytester95@gmail.com",
+        pass: "phmx nlhb krop gmvx",
+      },
+    });
+    const mailOptions = {
+      from: "verifytester95@gmail.com",
+      to: email,
+      subject: "Powtórne wysłanie linka do weryfikacji",
+      text: `Kliknij ten link, aby potwierdzić rejestrację: ${verificationLink}`,
+      html: `<p>Kliknij ten <a href="${verificationLink}">link</a>, aby potwierdzić rejestrację.</p>`,
+    };
+    const result = await transporter.sendMail(mailOptions);
+    console.log("Verification email sent:", result.response);
+    res.status(200).json({ message: "Verification email sent" });
+  } catch (error) {
+    console.error("Error during email resend:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 module.exports = router;
